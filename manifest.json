@@ -1,118 +1,118 @@
 {
-  "name": "NV Eklentileri",
+  "name": "Nuvio Eklentileri",
   "version": "1.0.0",
   "scrapers": [
     {
       "id": "altiyuzaltmisaltifilm",
       "name": "AltiYuzAltmisAltiFilm",
       "version": "1.0.0",
+      "description": "AltiYuzAltmisAltiFilm üzerinden Türkçe dublaj ve altyazılı filmler.",
       "supportedTypes": ["movie"],
-      "filename": "providers/altiyuzaltmisaltifilm.js",
-      "enabled": true
+      "filename": "providers/altiyuzaltmisaltifilm.js"
     },
     {
       "id": "cinemacity",
       "name": "CinemaCity",
       "version": "1.0.0",
+      "description": "Çoklu dil desteği sunan film ve dizi kaynağı.",
       "supportedTypes": ["movie", "tv"],
-      "filename": "providers/cinemacity.js",
-      "enabled": true
+      "filename": "providers/cinemacity.js"
     },
     {
       "id": "diziyou",
       "name": "DiziYou",
       "version": "1.0.0",
+      "description": "DiziYou üzerinden yüksek kaliteli diziler.",
       "supportedTypes": ["tv"],
-      "filename": "providers/diziyou.js",
-      "enabled": true
+      "filename": "providers/diziyou.js"
     },
     {
       "id": "filmmodu",
       "name": "FilmModu",
       "version": "1.0.0",
+      "description": "Türkçe dublaj ve altyazılı full HD filmler.",
       "supportedTypes": ["movie"],
-      "filename": "providers/filmmodu.js",
-      "enabled": true
+      "filename": "providers/filmmodu.js"
     },
     {
       "id": "fullhdfilmizlesene",
       "name": "FullHdFilmizlesene",
       "version": "1.0.0",
+      "description": "Türkiye'nin lider film sitesinden en yeni filmler.",
       "supportedTypes": ["movie"],
-      "filename": "providers/fullhdfilmizlesene.js",
-      "enabled": true
+      "filename": "providers/fullhdfilmizlesene.js"
     },
     {
       "id": "jetfilmizle",
       "name": "JetFilmizle",
       "version": "1.0.0",
+      "description": "Türkçe dublaj full HD filmler.",
       "supportedTypes": ["movie"],
-      "filename": "providers/jetfilmizle.js",
-      "enabled": true
+      "filename": "providers/jetfilmizle.js"
     },
     {
       "id": "moonvidmodyfilmdizi",
       "name": "MoonVidmodyFilmDizi",
       "version": "1.0.0",
+      "description": "En yeni filmleri ve dizileri hızlı şekilde sunar.",
       "supportedTypes": ["movie", "tv"],
-      "filename": "providers/moonvidmodyfilmdizi.js",
-      "enabled": true
+      "filename": "providers/moonvidmodyfilmdizi.js"
     },
     {
       "id": "netmirror",
       "name": "NetMirror",
       "version": "1.0.0",
+      "description": "NetMirror üzerinden yayın akışları.",
       "supportedTypes": ["movie", "tv"],
-      "filename": "providers/netmirror.js",
-      "enabled": true
+      "filename": "providers/netmirror.js"
     },
     {
       "id": "rec",
       "name": "Rec",
       "version": "1.0.0",
+      "description": "En yeni dizileri ve filmleri güvenli şekilde sunar.",
       "supportedTypes": ["movie", "tv"],
-      "filename": "providers/rec.js",
-      "enabled": true
+      "filename": "providers/rec.js"
     },
     {
       "id": "sezonlukdizi",
       "name": "SezonlukDizi",
       "version": "1.0.0",
+      "description": "Türkçe dublaj ve altyazılı diziler.",
       "supportedTypes": ["tv"],
-      "filename": "providers/sezonlukdizi.js",
-      "enabled": true
+      "filename": "providers/sezonlukdizi.js"
     },
     {
       "id": "sinemacx",
       "name": "SinemaCx",
       "version": "1.0.0",
+      "description": "Güncel ve en iyi yabancı filmler ve diziler.",
       "supportedTypes": ["movie", "tv"],
-      "filename": "providers/sinemacx.js",
-      "enabled": true
+      "filename": "providers/sinemacx.js"
     },
     {
       "id": "sinewix",
       "name": "SineWix",
       "version": "1.0.0",
+      "description": "Türkçe film, dizi ve anime arşivi.",
       "supportedTypes": ["movie", "tv"],
-      "filename": "providers/sinewix.js",
-      "enabled": true
+      "filename": "providers/sinewix.js"
     },
     {
       "id": "vidlink",
       "name": "Vidlink",
       "version": "1.0.0",
+      "description": "Vidlink ile film ve dizi yayınları.",
       "supportedTypes": ["movie", "tv"],
-      "filename": "providers/vidlink.js",
-      "enabled": true
+      "filename": "providers/vidlink.js"
     },
     {
       "id": "webteizle",
       "name": "WebteIzle",
       "version": "1.0.0",
+      "description": "Türkçe dublaj ve altyazılı filmler.",
       "supportedTypes": ["movie"],
-      "filename": "providers/webteizle.js",
-      "enabled": true
+      "filename": "providers/webteizle.js"
     }
   ]
 }
