@@ -3,6 +3,30 @@
   "version": "1.0.0",
   "scrapers": [
     {
+      "id": "altiyuzaltmisaltifilm",
+      "name": "AltiYuzAltmisAltiFilm",
+      "version": "1.0.0",
+      "supportedTypes": ["movie"],
+      "filename": "providers/altiyuzaltmisaltifilm.js",
+      "enabled": true
+    },
+    {
+      "id": "cinemacity",
+      "name": "CinemaCity",
+      "version": "1.0.0",
+      "supportedTypes": ["movie", "tv"],
+      "filename": "providers/cinemacity.js",
+      "enabled": true
+    },
+    {
+      "id": "diziyou",
+      "name": "DiziYou",
+      "version": "1.0.0",
+      "supportedTypes": ["tv"],
+      "filename": "providers/diziyou.js",
+      "enabled": true
+    },
+    {
       "id": "filmmodu",
       "name": "FilmModu",
       "version": "1.0.0",
@@ -11,11 +35,83 @@
       "enabled": true
     },
     {
+      "id": "fullhdfilmizlesene",
+      "name": "FullHdFilmizlesene",
+      "version": "1.0.0",
+      "supportedTypes": ["movie"],
+      "filename": "providers/fullhdfilmizlesene.js",
+      "enabled": true
+    },
+    {
+      "id": "jetfilmizle",
+      "name": "JetFilmizle",
+      "version": "1.0.0",
+      "supportedTypes": ["movie"],
+      "filename": "providers/jetfilmizle.js",
+      "enabled": true
+    },
+    {
+      "id": "moonvidmodyfilmdizi",
+      "name": "MoonVidmodyFilmDizi",
+      "version": "1.0.0",
+      "supportedTypes": ["movie", "tv"],
+      "filename": "providers/moonvidmodyfilmdizi.js",
+      "enabled": true
+    },
+    {
+      "id": "netmirror",
+      "name": "NetMirror",
+      "version": "1.0.0",
+      "supportedTypes": ["movie", "tv"],
+      "filename": "providers/netmirror.js",
+      "enabled": true
+    },
+    {
+      "id": "rec",
+      "name": "Rec",
+      "version": "1.0.0",
+      "supportedTypes": ["movie", "tv"],
+      "filename": "providers/rec.js",
+      "enabled": true
+    },
+    {
+      "id": "sezonlukdizi",
+      "name": "SezonlukDizi",
+      "version": "1.0.0",
+      "supportedTypes": ["tv"],
+      "filename": "providers/sezonlukdizi.js",
+      "enabled": true
+    },
+    {
       "id": "sinemacx",
       "name": "SinemaCx",
       "version": "1.0.0",
       "supportedTypes": ["movie", "tv"],
       "filename": "providers/sinemacx.js",
+      "enabled": true
+    },
+    {
+      "id": "sinewix",
+      "name": "SineWix",
+      "version": "1.0.0",
+      "supportedTypes": ["movie", "tv"],
+      "filename": "providers/sinewix.js",
+      "enabled": true
+    },
+    {
+      "id": "vidlink",
+      "name": "Vidlink",
+      "version": "1.0.0",
+      "supportedTypes": ["movie", "tv"],
+      "filename": "providers/vidlink.js",
+      "enabled": true
+    },
+    {
+      "id": "webteizle",
+      "name": "WebteIzle",
+      "version": "1.0.0",
+      "supportedTypes": ["movie"],
+      "filename": "providers/webteizle.js",
       "enabled": true
     }
   ]
