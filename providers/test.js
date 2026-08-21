@@ -1,5 +1,5 @@
 var TMDB_API_KEY = '500330721680edb6d5f7f12ba7cd9023';
-var VERSION = "8.0.19-DIZI-FIX";
+var VERSION = "8.0.21-DIZI-FIX";
 
 async function getStreams(tmdbId, mediaType, season, episode) {
     try {
@@ -23,7 +23,6 @@ async function getStreams(tmdbId, mediaType, season, episode) {
             const releaseYear = (d.release_date || '').slice(0, 4);
             displayTitle += releaseYear ? ` (${releaseYear})` : "";
             
-            // Film HEAD isteği ile kontrol
             try {
                 const checkRes = await fetch(targetUrl, { method: 'HEAD' });
                 if (checkRes.status === 200) {
@@ -42,17 +41,15 @@ async function getStreams(tmdbId, mediaType, season, episode) {
                 return [];
             }
         } else {
-            // DİZİ FORMATI: SADECE BUNU DEĞİŞTİRDİK
+            // DİZİ FORMATI: İstediğiniz Yeni Format
             if (!season || !episode) return [];
             
             let sStr = "s" + season;
             let eStr = "e" + (episode < 10 ? "0" + episode : episode);
             
-            // YENİ DİZİ FORMATI: /mm/ klasörüne yönlendir
-            targetUrl = `https://vidmody.com/mm/${imdbId}/${sStr}/${eStr}/main_1080/index-v1-a1.gif`;
+            targetUrl = `https://vidmody.com/vs/${imdbId}/${sStr}/${eStr}`;
             displayTitle += ` - ${sStr.toUpperCase()}${eStr.toUpperCase()}`;
             
-            // Dizi HEAD isteği ile kontrol
             try {
                 const checkRes = await fetch(targetUrl, { 
                     method: 'HEAD',
@@ -62,6 +59,7 @@ async function getStreams(tmdbId, mediaType, season, episode) {
                     }
                 });
                 
+                // Eğer site HEAD isteğine 200 veya 302 dönerse yayını kabul et
                 if (checkRes.status === 200 || checkRes.status === 302) {
                     return [{
                         url: targetUrl,
