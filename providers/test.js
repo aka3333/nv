@@ -1,12 +1,14 @@
 var TMDB_API_KEY = '500330721680edb6d5f7f12ba7cd9023';
-var VERSION = "8.0.25-DIZI-DEBUG";
+var VERSION = "8.0.30-FINAL-FIX";
 
 async function getStreams(tmdbId, mediaType, season, episode) {
     try {
-        // Nuvio'dan gelen değerleri konsola yazdıralım ki ne geldiğini görebilelim
-        console.log(`[V${VERSION}] Gelen İstek -> mediaType: ${mediaType}, tmdbId: ${tmdbId}, season: ${season}, episode: ${episode}`);
+        console.log(`[V${VERSION}] İstek Alındı -> Tür: ${mediaType}, TMDB: ${tmdbId}, Sezon: ${season}, Bölüm: ${episode}`);
 
-        const typePath = (mediaType === 'movie') ? 'movie' : 'tv';
+        // Dizi tiplerini güvenli şekilde yakalayalım ('tv' veya 'series')
+        const isMovie = (mediaType === 'movie');
+        const typePath = isMovie ? 'movie' : 'tv';
+        
         const tmdbUrl = `https://api.themoviedb.org/3/${typePath}/${tmdbId}?api_key=${TMDB_API_KEY}&language=tr-TR&append_to_response=external_ids`;
         
         const tmdbRes = await fetch(tmdbUrl);
@@ -15,14 +17,15 @@ async function getStreams(tmdbId, mediaType, season, episode) {
         const imdbId = d.external_ids ? d.external_ids.imdb_id : null;
         const title = d.title || d.name || "İçerik";
         
-        console.log(`[V${VERSION}] Bulunan IMDB ID: ${imdbId}, Başlık: ${title}`);
-
-        if (!imdbId || !imdbId.startsWith('tt')) return [];
+        if (!imdbId || !imdbId.startsWith('tt')) {
+            console.log(`[V${VERSION}] Geçerli IMDb ID bulunamadı.`);
+            return [];
+        }
 
         let targetUrl = "";
         let displayTitle = title;
 
-        if (mediaType === 'movie') {
+        if (isMovie) {
             targetUrl = `https://vidmody.com/vs/${imdbId}`;
             const releaseYear = (d.release_date || '').slice(0, 4);
             displayTitle += releaseYear ? ` (${releaseYear})` : "";
@@ -38,7 +41,7 @@ async function getStreams(tmdbId, mediaType, season, episode) {
                 }
             }];
         } else {
-            // Diziler için season veya episode gelmese bile test amaçlı varsayılan 1/1 atayarak test edelim
+            // Dizi için season veya episode gelmezse varsayılan 1 yapalım ki patlamasın
             let s = season || 1;
             let e = episode || 1;
             
@@ -48,7 +51,7 @@ async function getStreams(tmdbId, mediaType, season, episode) {
             targetUrl = `https://vidmody.com/vs/${imdbId}/${sStr}/${eStr}`;
             displayTitle += ` - ${sStr.toUpperCase()}${eStr.toUpperCase()}`;
             
-            console.log(`[V${VERSION}] Oluşturulan Dizi URL: ${targetUrl}`);
+            console.log(`[V${VERSION}] Dizi Linki Üretildi: ${targetUrl}`);
 
             return [{
                 url: targetUrl,
@@ -63,7 +66,7 @@ async function getStreams(tmdbId, mediaType, season, episode) {
         }
 
     } catch (e) {
-        console.error(`[V${VERSION}] HATA: ${e.message}`);
+        console.error(`[V${VERSION}] KRİTİK HATA: ${e.message}`);
         return [];
     }
 }
