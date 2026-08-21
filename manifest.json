@@ -1,6 +1,6 @@
 {
   "name": "Nuvio Eklentileri",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "scrapers": [
     {
       "id": "test",
