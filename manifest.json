@@ -7,7 +7,7 @@
       "name": "Test",
       "version": "1.0.0",
       "description": "Test scraper",
-      "supportedTypes": ["movie", "tv"],
+      "supportedTypes": ["movie", "tv", "series"],
       "filename": "providers/test.js"
     }
   ]
