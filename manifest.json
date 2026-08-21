@@ -1,0 +1,14 @@
+{
+  "name": "Nuvio Eklentileri",
+  "version": "1.0.0",
+  "scrapers": [
+    {
+      "id": "test",
+      "name": "Test",
+      "version": "1.0.0",
+      "description": "Test scraper",
+      "supportedTypes": ["movie", "tv"],
+      "filename": "test.js"
+    }
+  ]
+}
