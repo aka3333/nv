@@ -5,6 +5,7 @@
     {
       "id": "filmmodu",
       "name": "FilmModu",
+      "version": "1.0.0",
       "supportedTypes": ["movie"],
       "filename": "providers/filmmodu.js",
       "enabled": true
@@ -12,6 +13,7 @@
     {
       "id": "sinemacx",
       "name": "SinemaCx",
+      "version": "1.0.0",
       "supportedTypes": ["movie", "tv"],
       "filename": "providers/sinemacx.js",
       "enabled": true
