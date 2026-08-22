@@ -1,12 +1,20 @@
 var TMDB_API_KEY = '500330721680edb6d5f7f12ba7cd9023';
-var VERSION = "8.0.31-FINAL-SAFE";
+var VERSION = "9.0.0-NUVIO-SERIES-FIX";
 
 async function getStreams(tmdbId, mediaType, season, episode) {
     try {
         console.log(`[V${VERSION}] İstek Alındı -> Tür: ${mediaType}, TMDB: ${tmdbId}, Sezon: ${season}, Bölüm: ${episode}`);
 
-        // Dizi tiplerini güvenli şekilde yakalayalım ('movie' dışındaki her şeyi dizi/tv kabul ediyoruz)
-        const isMovie = (mediaType === 'movie' || mediaType === 'film');
+        // Nuvio bazen mediaType'ı 'series', 'tv', 'show' veya boş gönderebilir. 
+        // Eğer TMDB ID veya mediaType ipucu veriyorsa onu yakalayalım.
+        let type = (mediaType || '').toLowerCase();
+        let isMovie = type === 'movie' || type === 'film';
+        
+        // Eğer mediaType belirsizse ama parametrelerde season/episode varsa kesin dizidir
+        if (!isMovie && (season || episode)) {
+            isMovie = false;
+        }
+
         const typePath = isMovie ? 'movie' : 'tv';
         
         const tmdbUrl = `https://api.themoviedb.org/3/${typePath}/${tmdbId}?api_key=${TMDB_API_KEY}&language=tr-TR&append_to_response=external_ids`;
@@ -14,12 +22,11 @@ async function getStreams(tmdbId, mediaType, season, episode) {
         const tmdbRes = await fetch(tmdbUrl);
         const d = await tmdbRes.json();
         
-        // IMDb ID'yi alternatifli ve güvenli bir şekilde çekiyoruz
         const imdbId = (d.external_ids && d.external_ids.imdb_id) || d.imdb_id || null;
         const title = d.title || d.name || "İçerik";
         
         if (!imdbId || !imdbId.startsWith('tt')) {
-            console.log(`[V${VERSION}] Geçerli IMDb ID bulunamadı. Dönen veri:`, JSON.stringify(d));
+            console.log(`[V${VERSION}] Geçerli IMDb ID bulunamadı.`);
             return [];
         }
 
@@ -42,7 +49,7 @@ async function getStreams(tmdbId, mediaType, season, episode) {
                 }
             }];
         } else {
-            // Sezon veya bölüm gelmezse varsayılan 1 yapalım
+            // Nuvio dizilerde season/episode'u bazen string, bazen null, bazen de obje içinde yollayabilir. Hepsini süzüyoruz:
             let s = parseInt(season) || 1;
             let e = parseInt(episode) || 1;
             
