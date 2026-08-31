@@ -1,11 +1,5 @@
-// ============================================================
-//  DiziBal — Nuvio Provider (V3 Precision & Clean)
-//  Özellikler: 
-//  - Üstte Film Adı, Altta Kaynak/Bayrak
-//  - Kalite bilgisi sadece veride varsa görünür
-// ============================================================
-
-var DIZIBAL_URL  = 'https://dizibal.com';
+// v1
+var DIZIBAL_URL = 'https://dizibal.com';
 var TMDB_API_KEY = '8c598c9af9b0badc281e95b1890834bc';
 var PROVIDER_NAME = 'DiziBal';
 
@@ -15,30 +9,28 @@ var HEADERS = {
   'Referer': DIZIBAL_URL + '/'
 };
 
-// ── TMDB Verisi ──────────────────────────────────────────────
 function fetchTmdbInfo(tmdbId, mediaType) {
   var cleanId = String(tmdbId).trim();
-  
+  var isTv = mediaType !== "movie";
+
   if (cleanId.startsWith("tt")) {
     var findUrl = 'https://api.themoviedb.org/3/find/' + cleanId + '?api_key=' + TMDB_API_KEY + '&external_source=imdb_id&language=tr-TR';
     return fetch(findUrl)
       .then(function(r) { return r.json(); })
       .then(function(data) {
-        var item = null;
-        if (mediaType === "movie") {
-          item = (data.movie_results && data.movie_results[0]) || (data.tv_results && data.tv_results[0]);
-        } else {
-          item = (data.tv_results && data.tv_results[0]) || (data.movie_results && data.movie_results[0]);
-        }
+        var item = isTv 
+          ? ((data.tv_results && data.tv_results[0]) || (data.movie_results && data.movie_results[0]))
+          : ((data.movie_results && data.movie_results[0]) || (data.tv_results && data.tv_results[0]));
+        
         return {
           titleTr: (item && (item.title || item.name)) || '',
           titleEn: (item && (item.original_title || item.original_name)) || '',
           id: item ? item.id : null,
-          isTv: mediaType !== "movie"
+          isTv: isTv
         };
       });
   } else {
-    var endpoint = (mediaType === 'movie') ? 'movie' : 'tv';
+    var endpoint = isTv ? 'tv' : 'movie';
     return fetch('https://api.themoviedb.org/3/' + endpoint + '/' + cleanId + '?api_key=' + TMDB_API_KEY + '&language=tr-TR')
       .then(function(r) { return r.json(); })
       .then(function(d) {
@@ -46,13 +38,12 @@ function fetchTmdbInfo(tmdbId, mediaType) {
           titleTr: d.title || d.name || '',
           titleEn: d.original_title || d.original_name || '',
           id: d.id,
-          isTv: mediaType !== "movie"
+          isTv: isTv
         };
       });
   }
 }
 
-// ── Başlık Temizleme & Eşleştirme ─────────────────────────────
 function sanitizeTitle(str) {
   if (!str) return "";
   return str
@@ -72,20 +63,16 @@ function isTitleMatch(t1, t2) {
   return s1 === s2 || s1.includes(s2) || s2.includes(s1);
 }
 
-// ── Arama Fonksiyonu ──────────────────────────────────────────
 function performSearch(query, isTv) {
   var type = isTv ? "series" : "movies";
   var searchUrl = DIZIBAL_URL + '/api/' + type + '?search=' + encodeURIComponent(query) + '&page=1&limit=20&siteMode=full';
   
   return fetch(searchUrl, { headers: HEADERS })
     .then(function(r) { return r.json(); })
-    .then(function(json) {
-      return json.data || [];
-    })
+    .then(function(json) { return json.data || []; })
     .catch(function() { return []; });
 }
 
-// ── Doğru İçeriği Bulma ───────────────────────────────────────
 function findDiziBalItem(tmdbInfo) {
   var titles = [tmdbInfo.titleTr, tmdbInfo.titleEn].filter(Boolean);
   
@@ -101,17 +88,21 @@ function findDiziBalItem(tmdbInfo) {
         return isTitleMatch(query, rTitle);
       });
       
-      if (found) return found;
-      return trySearch(index + 1);
+      return found || trySearch(index + 1);
     });
   }
   
   return trySearch(0);
 }
 
-// ── Embed Çözücü ──────────────────────────────────────────────
 function resolveEmbedStream(streamUrl, movieTitle) {
-  var u = new URL(streamUrl);
+  var u;
+  try {
+    u = new URL(streamUrl);
+  } catch (e) {
+    return Promise.resolve(null);
+  }
+
   return fetch(streamUrl, {
     headers: {
       'User-Agent': HEADERS['User-Agent'],
@@ -136,7 +127,6 @@ function resolveEmbedStream(streamUrl, movieTitle) {
     .then(function(streamJson) {
       if (!streamJson.url) return null;
 
-      // Altyazı Ayıklama
       var subList = [];
       var subMatch = html.match(/"subtitle"\s*:\s*"([^"]+)"/);
       if (subMatch) {
@@ -147,11 +137,12 @@ function resolveEmbedStream(streamUrl, movieTitle) {
             var label = parts[1].trim();
             var subUrl = parts[2].trim();
             var isTr = label.toLowerCase().includes("türk") || label.toLowerCase().startsWith("tr");
+            var langCode = isTr ? "tr" : "en";
             subList.push({
               id: isTr ? "tur" : "en",
               url: subUrl,
-              lang: isTr ? "tur" : "en",
-              language: isTr ? "tr" : "en",
+              lang: langCode,
+              language: langCode,
               label: label,
               name: label,
               title: label
@@ -180,7 +171,6 @@ function resolveEmbedStream(streamUrl, movieTitle) {
   .catch(function() { return null; });
 }
 
-// ── Ana Fonksiyon ─────────────────────────────────────────────
 function getStreams(tmdbId, mediaType, season, episode) {
   var sNum = season || 1;
   var eNum = episode || 1;
