@@ -1,3 +1,4 @@
+// v1
 var DIZIBAL_URL = 'https://dizibal.org';
 var TMDB_API_KEY = '8c598c9af9b0badc281e95b1890834bc';
 var PROVIDER_NAME = 'DiziBal';
@@ -24,11 +25,12 @@ function fetchTmdbInfo(inputIdentifier, mediaType) {
           titleTr: (item && (item.title || item.name)) || '',
           titleEn: (item && (item.original_title || item.original_name)) || '',
           id: item && item.id ? String(item.id) : cleanId,
+          imdbId: item && item.imdb_id ? String(item.imdb_id) : null,
           isTv: isTv
         };
       })
       .catch(function() {
-        return { titleTr: '', titleEn: '', id: cleanId, isTv: isTv };
+        return { titleTr: '', titleEn: '', id: cleanId, imdbId: null, isTv: isTv };
       });
   } else {
     url = 'https://api.themoviedb.org/3/find/' + cleanId + '?api_key=' + TMDB_API_KEY + '&external_source=imdb_id&language=tr-TR';
@@ -42,12 +44,13 @@ function fetchTmdbInfo(inputIdentifier, mediaType) {
         return {
           titleTr: (item && (item.title || item.name)) || '',
           titleEn: (item && (item.original_title || item.original_name)) || '',
-          id: item ? String(item.id) : null,
+          id: item && item.id ? String(item.id) : null,
+          imdbId: cleanId,
           isTv: isTv
         };
       })
       .catch(function() {
-        return { titleTr: '', titleEn: '', id: null, isTv: isTv };
+        return { titleTr: '', titleEn: '', id: null, imdbId: cleanId, isTv: isTv };
       });
   }
 }
@@ -65,30 +68,35 @@ function performSearch(query, isTv) {
 function findDiziBalItem(tmdbInfo, originalInputId) {
   var queries = [tmdbInfo.titleEn, tmdbInfo.titleTr].filter(Boolean);
 
-  function tryTmdbIdSearch(index) {
+  function trySearch(index) {
     if (index >= queries.length) {
+      // Son çare olarak doğrudan ID ile arama sorgusu dene
       return performSearch(originalInputId, tmdbInfo.isTv).then(function(resList) {
-        if (resList && resList.length > 0) {
-          var exactImdbMatch = resList.find(function(r) {
-            return r.imdb_id && r.imdb_id.toLowerCase() === String(originalInputId).toLowerCase();
-          });
-          return exactImdbMatch || null;
-        }
-        return null;
+        return resList.find(function(r) {
+          var rId = r.id ? String(r.id) : "";
+          var rImdb = r.imdb_id ? String(r.imdb_id).toLowerCase() : "";
+          return (tmdbInfo.id && rId === tmdbInfo.id) || 
+                 (tmdbInfo.imdbId && rImdb === tmdbInfo.imdbId.toLowerCase()) ||
+                 (rImdb === String(originalInputId).toLowerCase());
+        }) || null;
       });
     }
 
     var query = queries[index];
     return performSearch(query, tmdbInfo.isTv).then(function(resList) {
+      // Sadece TMDB ID veya IMDb ID tam uyuşuyorsa kabul et (yanlış film eşleşmesini önler)
       var found = resList.find(function(r) {
         var rId = r.id ? String(r.id) : "";
-        return tmdbInfo.id && rId === tmdbInfo.id;
+        var rImdb = r.imdb_id ? String(r.imdb_id).toLowerCase() : "";
+        return (tmdbInfo.id && rId === tmdbInfo.id) || 
+               (tmdbInfo.imdbId && rImdb === tmdbInfo.imdbId.toLowerCase()) ||
+               (rImdb === String(originalInputId).toLowerCase());
       });
-      return found || tryTmdbIdSearch(index + 1);
+      return found || trySearch(index + 1);
     });
   }
 
-  return tryTmdbIdSearch(0);
+  return trySearch(0);
 }
 
 function resolveEmbedStream(streamUrl, movieTitle) {
@@ -153,10 +161,14 @@ function resolveEmbedStream(streamUrl, movieTitle) {
         }
       }
 
-      var streamResult = {
+      // Tüm detayları ekranda görebilmen için başlığa işliyoruz
+      var subLabelsStr = subList.length > 0 ? subList.map(function(s) { return s.label; }).join(', ') : 'Altyazı Yok';
+      var streamTitle = PROVIDER_NAME + ' | 1080p | HLS | Altyazı: ' + subLabelsStr;
+
+      return {
         url: streamJson.url,
         name: movieTitle,
-        title: PROVIDER_NAME + ' | Türkçe Altyazılı',
+        title: streamTitle,
         quality: '1080p',
         type: 'hls',
         headers: {
@@ -168,12 +180,6 @@ function resolveEmbedStream(streamUrl, movieTitle) {
           notWebReady: true
         }
       };
-
-      console.log("--- DIZIBAL YAYIN DETAYLARI ---");
-      console.log("Ham API Yanıtı (streamJson):", JSON.stringify(streamJson, null, 2));
-      console.log("Nuvio'ya Giden Sonuç Nesnesi:", JSON.stringify(streamResult, null, 2));
-
-      return streamResult;
     });
   })
   .catch(function() { return null; });
