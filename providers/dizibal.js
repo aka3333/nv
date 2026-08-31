@@ -1,5 +1,5 @@
 // v1
-var DIZIBAL_URL = 'https://dizibal.com';
+var DIZIBAL_URL = 'https://dizibal.org';
 var TMDB_API_KEY = '8c598c9af9b0badc281e95b1890834bc';
 var PROVIDER_NAME = 'DiziBal';
 
