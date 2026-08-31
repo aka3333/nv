@@ -1,4 +1,4 @@
-// v3
+// v4
 var DIZIBAL_URL = 'https://dizibal.org';
 var TMDB_API_KEY = '8c598c9af9b0badc281e95b1890834bc';
 var PROVIDER_NAME = 'DiziBal';
@@ -24,7 +24,7 @@ function fetchTmdbInfo(imdbId, mediaType) {
       return {
         titleTr: (item && (item.title || item.name)) || '',
         titleEn: (item && (item.original_title || item.original_name)) || '',
-        id: item ? item.id : null,
+        id: item ? String(item.id) : null,
         isTv: isTv
       };
     });
@@ -48,15 +48,14 @@ function findDiziBalItem(tmdbInfo, targetImdbId) {
     var query = queries[index];
     
     return performSearch(query, tmdbInfo.isTv).then(function(resList) {
+      // Net olarak imdb_id veya id eşleşmesine bakıyoruz
       var found = resList.find(function(r) {
-        var rImdb = r.imdb_id || r.imdbId;
-        if (rImdb && String(rImdb).toLowerCase() === String(targetImdbId).toLowerCase()) {
-          return true;
-        }
+        var rImdb = r.imdb_id || "";
         var rId = r.id ? String(r.id) : "";
-        if (tmdbInfo.id && rId === String(tmdbInfo.id)) {
-          return true;
-        }
+        
+        if (rImdb && rImdb.toLowerCase() === targetImdbId.toLowerCase()) return true;
+        if (tmdbInfo.id && rId === tmdbInfo.id) return true;
+        
         return false;
       });
       
