@@ -1,4 +1,4 @@
-// v2
+// v3
 var DIZIBAL_URL = 'https://dizibal.org';
 var TMDB_API_KEY = '8c598c9af9b0badc281e95b1890834bc';
 var PROVIDER_NAME = 'DiziBal';
@@ -12,7 +12,6 @@ var HEADERS = {
 function fetchTmdbInfo(imdbId, mediaType) {
   var cleanId = String(imdbId).trim();
   var isTv = (mediaType === 'series' || mediaType === 'tv');
-
   var findUrl = 'https://api.themoviedb.org/3/find/' + cleanId + '?api_key=' + TMDB_API_KEY + '&external_source=imdb_id&language=tr-TR';
   
   return fetch(findUrl)
@@ -31,18 +30,6 @@ function fetchTmdbInfo(imdbId, mediaType) {
     });
 }
 
-function sanitizeTitle(str) {
-  if (!str) return "";
-  return str
-    .toLowerCase()
-    .replace(/['’]/g, "")
-    .replace(/ı/g, "i").replace(/ğ/g, "g").replace(/ü/g, "u")
-    .replace(/ş/g, "s").replace(/ö/g, "o").replace(/ç/g, "c")
-    .replace(/[^a-z0-9]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 function performSearch(query, isTv) {
   var type = isTv ? "series" : "movies";
   var searchUrl = DIZIBAL_URL + '/api/' + type + '?search=' + encodeURIComponent(query) + '&page=1&limit=20&siteMode=full';
@@ -54,20 +41,20 @@ function performSearch(query, isTv) {
 }
 
 function findDiziBalItem(tmdbInfo, targetImdbId) {
-  var titles = [tmdbInfo.titleTr, tmdbInfo.titleEn].filter(Boolean);
+  var queries = [tmdbInfo.titleEn, tmdbInfo.titleTr].filter(Boolean);
   
   function trySearch(index) {
-    if (index >= titles.length) return Promise.resolve(null);
-    var query = titles[index];
+    if (index >= queries.length) return Promise.resolve(null);
+    var query = queries[index];
     
-    return performSearch(query, tmdbInfo.isTv).then(function(results) {
-      var found = results.find(function(r) {
-        var rImdb = r.imdb_id || r.imdbId || r.external_ids?.imdb_id;
+    return performSearch(query, tmdbInfo.isTv).then(function(resList) {
+      var found = resList.find(function(r) {
+        var rImdb = r.imdb_id || r.imdbId;
         if (rImdb && String(rImdb).toLowerCase() === String(targetImdbId).toLowerCase()) {
           return true;
         }
-        var rTmdb = r.id ? String(r.id) : "";
-        if (tmdbInfo.id && rTmdb === String(tmdbInfo.id)) {
+        var rId = r.id ? String(r.id) : "";
+        if (tmdbInfo.id && rId === String(tmdbInfo.id)) {
           return true;
         }
         return false;
