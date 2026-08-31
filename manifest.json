@@ -4,9 +4,9 @@
   "scrapers": [
     {
       "id": "dizibal",
-      "name": "dizibal",
+      "name": "Dizibal",
       "version": "1.0.0",
-      "description": "Dizibal eklentisi",
+      "description": "Dizibal Eklentisi",
       "supportedTypes": [
         "movie",
         "series"
