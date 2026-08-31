@@ -1,4 +1,4 @@
-// v6 - Medya Türü Ayrımı ve Öncelikli Arama Stratejisi
+// v7 - Kesin ve Hatasız DiziBal Nuvio Eklentisi
 var DIZIBAL_URL = 'https://dizibal.org';
 var TMDB_API_KEY = '8c598c9af9b0badc281e95b1890834bc';
 var PROVIDER_NAME = 'DiziBal';
@@ -25,7 +25,6 @@ function fetchTmdbInfo(imdbId, mediaType) {
         titleTr: (item && (item.title || item.name)) || '',
         titleEn: (item && (item.original_title || item.original_name)) || '',
         id: item ? String(item.id) : null,
-        slug: item && item.slug ? item.slug : null, // TMDB yanıtında slug varsa alınır
         isTv: isTv
       };
     })
@@ -34,7 +33,6 @@ function fetchTmdbInfo(imdbId, mediaType) {
         titleTr: '',
         titleEn: '',
         id: null,
-        slug: null,
         isTv: isTv
       };
     });
@@ -51,14 +49,12 @@ function performSearch(query, isTv) {
 }
 
 function findDiziBalItem(tmdbInfo) {
-  // Önce orijinal İngilizce isim, yoksa Türkçe isim deneniyor
   var queries = [tmdbInfo.titleEn, tmdbInfo.titleTr].filter(Boolean);
   
   function trySearch(index) {
     if (index >= queries.length) return Promise.resolve(null);
     var query = queries[index];
     
-    // Nuvio'dan gelen isteğe göre sadece ilgili tipte arama yapılıyor (movies veya series)
     return performSearch(query, tmdbInfo.isTv).then(function(resList) {
       var found = resList.find(function(r) {
         var rId = r.id ? String(r.id) : "";
@@ -171,7 +167,7 @@ function getStreams(imdbId, mediaType, season, episode) {
               return epJson.data && epJson.data.streamUrl;
             });
         } else {
-          var slug = matchedItem.slug || info.slug;
+          var slug = matchedItem.slug;
           if (!slug) return Promise.resolve(null);
           var detailUrl = DIZIBAL_URL + '/api/movies/' + slug;
           streamEmbedUrlPromise = fetch(detailUrl, { headers: HEADERS })
