@@ -1,4 +1,4 @@
-// v7 - Kesin ve Hatasız DiziBal Nuvio Eklentisi
+// v8 - Çoklu Yedekli Arama ve Eşleştirme Stratejisi
 var DIZIBAL_URL = 'https://dizibal.org';
 var TMDB_API_KEY = '8c598c9af9b0badc281e95b1890834bc';
 var PROVIDER_NAME = 'DiziBal';
@@ -24,7 +24,7 @@ function fetchTmdbInfo(imdbId, mediaType) {
       return {
         titleTr: (item && (item.title || item.name)) || '',
         titleEn: (item && (item.original_title || item.original_name)) || '',
-        id: item ? String(item.id) : null,
+        id: item && item.id ? String(item.id) : null,
         isTv: isTv
       };
     })
@@ -48,24 +48,46 @@ function performSearch(query, isTv) {
     .catch(function() { return []; });
 }
 
-function findDiziBalItem(tmdbInfo) {
+function findDiziBalItem(tmdbInfo, originalImdbId) {
+  // Strateji 1: TMDB ID ile eşleştirme (Önce İngilizce, sonra Türkçe isimle arayıp ID tutturma)
   var queries = [tmdbInfo.titleEn, tmdbInfo.titleTr].filter(Boolean);
   
-  function trySearch(index) {
-    if (index >= queries.length) return Promise.resolve(null);
-    var query = queries[index];
+  function tryTmdbIdSearch(qIndex) {
+    if (qIndex >= queries.length) {
+      // Strateji 2: TMDB ID tutmadıysa, doğrudan orijinal IMDb ID (`tt...`) ile arama yapmayı dene
+      return performSearch(originalImdbId, tmdbInfo.isTv).then(function(resList) {
+        if (resList && resList.length > 0) return resList[0];
+        
+        // Strateji 3: O da boş dönerse, isimlerle gelen ilk sonucu kabul et (Esnek eşleşme)
+        return tryNameFallback(0);
+      });
+    }
     
+    var query = queries[qIndex];
     return performSearch(query, tmdbInfo.isTv).then(function(resList) {
       var found = resList.find(function(r) {
         var rId = r.id ? String(r.id) : "";
         return tmdbInfo.id && rId === tmdbInfo.id;
       });
       
-      return found || trySearch(index + 1);
+      return found || tryTmdbIdSearch(qIndex + 1);
+    });
+  }
+
+  function tryNameFallback(qIndex) {
+    if (qIndex >= queries.length) return Promise.resolve(null);
+    var query = queries[qIndex];
+    
+    return performSearch(query, tmdbInfo.isTv).then(function(resList) {
+      if (resList && resList.length > 0) {
+        // En iyi eşleşen veya ilk gelen sonucu döndür
+        return resList[0];
+      }
+      return tryNameFallback(qIndex + 1);
     });
   }
   
-  return trySearch(0);
+  return tryTmdbIdSearch(0);
 }
 
 function resolveEmbedStream(streamUrl, movieTitle) {
@@ -150,12 +172,12 @@ function getStreams(imdbId, mediaType, season, episode) {
   var eNum = episode || 1;
   var isTv = (mediaType === 'series' || mediaType === 'tv');
 
-  return fetchTmdbInfo(cleanImdbId, mediaType)
+  return fetchTmdbInfo(cleanImdbId, isTv)
     .then(function(info) {
       info.isTv = isTv;
       var movieName = info.titleTr || info.titleEn;
       
-      return findDiziBalItem(info).then(function(matchedItem) {
+      return findDiziBalItem(info, cleanImdbId).then(function(matchedItem) {
         if (!matchedItem || !matchedItem._id) return [];
 
         var streamEmbedUrlPromise;
