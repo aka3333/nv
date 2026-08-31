@@ -1,4 +1,3 @@
-// v1
 var DIZIBAL_URL = 'https://dizibal.org';
 var TMDB_API_KEY = '8c598c9af9b0badc281e95b1890834bc';
 var PROVIDER_NAME = 'DiziBal';
@@ -70,7 +69,6 @@ function findDiziBalItem(tmdbInfo, originalInputId) {
 
   function trySearch(index) {
     if (index >= queries.length) {
-      // Son çare olarak doğrudan ID ile arama sorgusu dene
       return performSearch(originalInputId, tmdbInfo.isTv).then(function(resList) {
         return resList.find(function(r) {
           var rId = r.id ? String(r.id) : "";
@@ -84,7 +82,6 @@ function findDiziBalItem(tmdbInfo, originalInputId) {
 
     var query = queries[index];
     return performSearch(query, tmdbInfo.isTv).then(function(resList) {
-      // Sadece TMDB ID veya IMDb ID tam uyuşuyorsa kabul et (yanlış film eşleşmesini önler)
       var found = resList.find(function(r) {
         var rId = r.id ? String(r.id) : "";
         var rImdb = r.imdb_id ? String(r.imdb_id).toLowerCase() : "";
@@ -161,14 +158,10 @@ function resolveEmbedStream(streamUrl, movieTitle) {
         }
       }
 
-      // Tüm detayları ekranda görebilmen için başlığa işliyoruz
-      var subLabelsStr = subList.length > 0 ? subList.map(function(s) { return s.label; }).join(', ') : 'Altyazı Yok';
-      var streamTitle = PROVIDER_NAME + ' | 1080p | HLS | Altyazı: ' + subLabelsStr;
-
       return {
         url: streamJson.url,
         name: movieTitle,
-        title: streamTitle,
+        title: PROVIDER_NAME + ' - 1080p',
         quality: '1080p',
         type: 'hls',
         headers: {
