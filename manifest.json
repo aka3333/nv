@@ -1,0 +1,17 @@
+{
+  "name": "Nuvio Eklentileri",
+  "version": "1.0.0",
+  "scrapers": [
+    {
+      "id": "dizibal",
+      "name": "dizibal",
+      "version": "1.0.0",
+      "description": "Dizibal eklentisi",
+      "supportedTypes": [
+        "movie",
+        "series"
+      ],
+      "filename": "providers/dizibal.js"
+    }
+  ]
+}
