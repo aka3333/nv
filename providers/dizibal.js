@@ -1,3 +1,4 @@
+// 1
 var DIZIBAL_URL = 'https://dizibal.org';
 var TMDB_API_KEY = '8c598c9af9b0badc281e95b1890834bc';
 var PROVIDER_NAME = 'DiziBal';
@@ -96,7 +97,7 @@ function findDiziBalItem(tmdbInfo, originalInputId) {
   return trySearch(0);
 }
 
-function resolveEmbedStream(streamUrl, movieTitle) {
+function resolveEmbedStream(streamUrl) {
   var u;
   try {
     u = new URL(streamUrl);
@@ -158,28 +159,35 @@ function resolveEmbedStream(streamUrl, movieTitle) {
         }
       }
 
+      var hasTurkishSub = subList.length > 0;
+      var languageStatus = hasTurkishSub ? "Türkçe Altyazı" : "";
+
+      var titleParts = [
+        "HLS",
+        languageStatus
+      ].filter(Boolean);
+
       return {
+        name: PROVIDER_NAME + ' - 1080p',
+        title: titleParts.join(' | '),
         url: streamJson.url,
-        name: movieTitle,
-        title: PROVIDER_NAME + ' - 1080p',
-        quality: '1080p',
-        type: 'hls',
-        headers: {
-          'Referer': streamUrl,
-          'User-Agent': HEADERS['User-Agent']
-        },
-        subtitles: subList,
         behaviorHints: {
-          notWebReady: true
-        }
+          proxyHeaders: {
+            'Referer': streamUrl,
+            'Origin': u.origin,
+            'User-Agent': HEADERS['User-Agent']
+          },
+          notWebReady: false
+        },
+        subtitles: subList
       };
     });
   })
   .catch(function() { return null; });
 }
 
-function getStreams(inputIdentifier, mediaType, season, episode) {
-  var cleanInput = String(inputIdentifier).trim();
+function getStreams(identifier, mediaType, season, episode) {
+  var cleanInput = String(identifier).trim();
   var sNum = season || 1;
   var eNum = episode || 1;
   var isTv = (mediaType === 'series' || mediaType === 'tv');
@@ -187,7 +195,6 @@ function getStreams(inputIdentifier, mediaType, season, episode) {
   return fetchTmdbInfo(cleanInput, mediaType)
     .then(function(info) {
       info.isTv = isTv;
-      var movieName = info.titleTr || info.titleEn;
 
       return findDiziBalItem(info, cleanInput).then(function(matchedItem) {
         if (!matchedItem || !matchedItem._id) return [];
@@ -213,7 +220,7 @@ function getStreams(inputIdentifier, mediaType, season, episode) {
 
         return streamEmbedUrlPromise.then(function(streamEmbedUrl) {
           if (!streamEmbedUrl) return [];
-          return resolveEmbedStream(streamEmbedUrl, movieName).then(function(stream) {
+          return resolveEmbedStream(streamEmbedUrl).then(function(stream) {
             return stream ? [stream] : [];
           });
         });
