@@ -1,4 +1,4 @@
-// v4
+// v5 - TMDB ID Tabanlı Eşleştirme
 var DIZIBAL_URL = 'https://dizibal.org';
 var TMDB_API_KEY = '8c598c9af9b0badc281e95b1890834bc';
 var PROVIDER_NAME = 'DiziBal';
@@ -9,22 +9,27 @@ var HEADERS = {
   'Referer': DIZIBAL_URL + '/'
 };
 
-function fetchTmdbInfo(imdbId, mediaType) {
-  var cleanId = String(imdbId).trim();
+function fetchTmdbInfo(tmdbId, mediaType) {
+  var cleanId = String(tmdbId).trim();
   var isTv = (mediaType === 'series' || mediaType === 'tv');
-  var findUrl = 'https://api.themoviedb.org/3/find/' + cleanId + '?api_key=' + TMDB_API_KEY + '&external_source=imdb_id&language=tr-TR';
+  var endpoint = isTv ? 'tv' : 'movie';
+  var url = 'https://api.themoviedb.org/3/' + endpoint + '/' + cleanId + '?api_key=' + TMDB_API_KEY + '&language=tr-TR';
   
-  return fetch(findUrl)
+  return fetch(url)
     .then(function(r) { return r.json(); })
-    .then(function(data) {
-      var item = isTv 
-        ? ((data.tv_results && data.tv_results[0]) || (data.movie_results && data.movie_results[0]))
-        : ((data.movie_results && data.movie_results[0]) || (data.tv_results && data.tv_results[0]));
-      
+    .then(function(item) {
       return {
         titleTr: (item && (item.title || item.name)) || '',
         titleEn: (item && (item.original_title || item.original_name)) || '',
-        id: item ? String(item.id) : null,
+        id: item && item.id ? String(item.id) : cleanId,
+        isTv: isTv
+      };
+    })
+    .catch(function() {
+      return {
+        titleTr: '',
+        titleEn: '',
+        id: cleanId,
         isTv: isTv
       };
     });
@@ -40,7 +45,7 @@ function performSearch(query, isTv) {
     .catch(function() { return []; });
 }
 
-function findDiziBalItem(tmdbInfo, targetImdbId) {
+function findDiziBalItem(tmdbInfo) {
   var queries = [tmdbInfo.titleEn, tmdbInfo.titleTr].filter(Boolean);
   
   function trySearch(index) {
@@ -48,15 +53,9 @@ function findDiziBalItem(tmdbInfo, targetImdbId) {
     var query = queries[index];
     
     return performSearch(query, tmdbInfo.isTv).then(function(resList) {
-      // Net olarak imdb_id veya id eşleşmesine bakıyoruz
       var found = resList.find(function(r) {
-        var rImdb = r.imdb_id || "";
         var rId = r.id ? String(r.id) : "";
-        
-        if (rImdb && rImdb.toLowerCase() === targetImdbId.toLowerCase()) return true;
-        if (tmdbInfo.id && rId === tmdbInfo.id) return true;
-        
-        return false;
+        return tmdbInfo.id && rId === tmdbInfo.id;
       });
       
       return found || trySearch(index + 1);
@@ -142,18 +141,18 @@ function resolveEmbedStream(streamUrl, movieTitle) {
   .catch(function() { return null; });
 }
 
-function getStreams(tmdbIdOrImdb, mediaType, season, episode) {
-  var targetImdbId = String(tmdbIdOrImdb).trim();
+function getStreams(tmdbId, mediaType, season, episode) {
+  var cleanTmdbId = String(tmdbId).trim();
   var sNum = season || 1;
   var eNum = episode || 1;
   var isTv = (mediaType === 'series' || mediaType === 'tv');
 
-  return fetchTmdbInfo(targetImdbId, mediaType)
+  return fetchTmdbInfo(cleanTmdbId, mediaType)
     .then(function(info) {
       info.isTv = isTv;
       var movieName = info.titleTr || info.titleEn;
       
-      return findDiziBalItem(info, targetImdbId).then(function(matchedItem) {
+      return findDiziBalItem(info).then(function(matchedItem) {
         if (!matchedItem || !matchedItem._id) return [];
 
         var streamEmbedUrlPromise;
