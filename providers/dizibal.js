@@ -1,5 +1,5 @@
 // ============================================================
-//  DiziBal — Nuvio Provider (V32 Precision & Clean)
+//  DiziBal — Nuvio Provider (V3 Precision & Clean)
 //  Özellikler: 
 //  - Üstte Film Adı, Altta Kaynak/Bayrak
 //  - Kalite bilgisi sadece veride varsa görünür
