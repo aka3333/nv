@@ -1,4 +1,3 @@
-// v1
 var DIZIBAL_URL = 'https://dizibal.org';
 var TMDB_API_KEY = '8c598c9af9b0badc281e95b1890834bc';
 var PROVIDER_NAME = 'DiziBal';
@@ -73,9 +72,9 @@ function findDiziBalItem(tmdbInfo, originalInputId) {
           var exactImdbMatch = resList.find(function(r) {
             return r.imdb_id && r.imdb_id.toLowerCase() === String(originalInputId).toLowerCase();
           });
-          return exactImdbMatch || resList[0];
+          return exactImdbMatch || null;
         }
-        return tryNameFallback(0);
+        return null;
       });
     }
 
@@ -86,16 +85,6 @@ function findDiziBalItem(tmdbInfo, originalInputId) {
         return tmdbInfo.id && rId === tmdbInfo.id;
       });
       return found || tryTmdbIdSearch(index + 1);
-    });
-  }
-
-  function tryNameFallback(index) {
-    if (index >= queries.length) return Promise.resolve(null);
-    var query = queries[index];
-
-    return performSearch(query, tmdbInfo.isTv).then(function(resList) {
-      if (resList && resList.length > 0) return resList[0];
-      return tryNameFallback(index + 1);
     });
   }
 
@@ -164,7 +153,7 @@ function resolveEmbedStream(streamUrl, movieTitle) {
         }
       }
 
-      return {
+      var streamResult = {
         url: streamJson.url,
         name: movieTitle,
         title: PROVIDER_NAME + ' | Türkçe Altyazılı',
@@ -179,6 +168,12 @@ function resolveEmbedStream(streamUrl, movieTitle) {
           notWebReady: true
         }
       };
+
+      console.log("--- DIZIBAL YAYIN DETAYLARI ---");
+      console.log("Ham API Yanıtı (streamJson):", JSON.stringify(streamJson, null, 2));
+      console.log("Nuvio'ya Giden Sonuç Nesnesi:", JSON.stringify(streamResult, null, 2));
+
+      return streamResult;
     });
   })
   .catch(function() { return null; });
