@@ -1,4 +1,4 @@
-// v5 - TMDB ID Tabanlı Eşleştirme
+// v6 - Medya Türü Ayrımı ve Öncelikli Arama Stratejisi
 var DIZIBAL_URL = 'https://dizibal.org';
 var TMDB_API_KEY = '8c598c9af9b0badc281e95b1890834bc';
 var PROVIDER_NAME = 'DiziBal';
@@ -9,19 +9,23 @@ var HEADERS = {
   'Referer': DIZIBAL_URL + '/'
 };
 
-function fetchTmdbInfo(tmdbId, mediaType) {
-  var cleanId = String(tmdbId).trim();
+function fetchTmdbInfo(imdbId, mediaType) {
+  var cleanId = String(imdbId).trim();
   var isTv = (mediaType === 'series' || mediaType === 'tv');
-  var endpoint = isTv ? 'tv' : 'movie';
-  var url = 'https://api.themoviedb.org/3/' + endpoint + '/' + cleanId + '?api_key=' + TMDB_API_KEY + '&language=tr-TR';
+  var findUrl = 'https://api.themoviedb.org/3/find/' + cleanId + '?api_key=' + TMDB_API_KEY + '&external_source=imdb_id&language=tr-TR';
   
-  return fetch(url)
+  return fetch(findUrl)
     .then(function(r) { return r.json(); })
-    .then(function(item) {
+    .then(function(data) {
+      var item = isTv 
+        ? ((data.tv_results && data.tv_results[0]) || (data.movie_results && data.movie_results[0]))
+        : ((data.movie_results && data.movie_results[0]) || (data.tv_results && data.tv_results[0]));
+      
       return {
         titleTr: (item && (item.title || item.name)) || '',
         titleEn: (item && (item.original_title || item.original_name)) || '',
-        id: item && item.id ? String(item.id) : cleanId,
+        id: item ? String(item.id) : null,
+        slug: item && item.slug ? item.slug : null, // TMDB yanıtında slug varsa alınır
         isTv: isTv
       };
     })
@@ -29,7 +33,8 @@ function fetchTmdbInfo(tmdbId, mediaType) {
       return {
         titleTr: '',
         titleEn: '',
-        id: cleanId,
+        id: null,
+        slug: null,
         isTv: isTv
       };
     });
@@ -46,12 +51,14 @@ function performSearch(query, isTv) {
 }
 
 function findDiziBalItem(tmdbInfo) {
+  // Önce orijinal İngilizce isim, yoksa Türkçe isim deneniyor
   var queries = [tmdbInfo.titleEn, tmdbInfo.titleTr].filter(Boolean);
   
   function trySearch(index) {
     if (index >= queries.length) return Promise.resolve(null);
     var query = queries[index];
     
+    // Nuvio'dan gelen isteğe göre sadece ilgili tipte arama yapılıyor (movies veya series)
     return performSearch(query, tmdbInfo.isTv).then(function(resList) {
       var found = resList.find(function(r) {
         var rId = r.id ? String(r.id) : "";
@@ -141,13 +148,13 @@ function resolveEmbedStream(streamUrl, movieTitle) {
   .catch(function() { return null; });
 }
 
-function getStreams(tmdbId, mediaType, season, episode) {
-  var cleanTmdbId = String(tmdbId).trim();
+function getStreams(imdbId, mediaType, season, episode) {
+  var cleanImdbId = String(imdbId).trim();
   var sNum = season || 1;
   var eNum = episode || 1;
   var isTv = (mediaType === 'series' || mediaType === 'tv');
 
-  return fetchTmdbInfo(cleanTmdbId, mediaType)
+  return fetchTmdbInfo(cleanImdbId, mediaType)
     .then(function(info) {
       info.isTv = isTv;
       var movieName = info.titleTr || info.titleEn;
@@ -164,7 +171,7 @@ function getStreams(tmdbId, mediaType, season, episode) {
               return epJson.data && epJson.data.streamUrl;
             });
         } else {
-          var slug = matchedItem.slug;
+          var slug = matchedItem.slug || info.slug;
           if (!slug) return Promise.resolve(null);
           var detailUrl = DIZIBAL_URL + '/api/movies/' + slug;
           streamEmbedUrlPromise = fetch(detailUrl, { headers: HEADERS })
