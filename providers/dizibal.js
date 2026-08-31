@@ -1,47 +1,34 @@
-// v1
+// v2
 var DIZIBAL_URL = 'https://dizibal.org';
 var TMDB_API_KEY = '8c598c9af9b0badc281e95b1890834bc';
 var PROVIDER_NAME = 'DiziBal';
 
 var HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
   'Accept': 'application/json, text/plain, */*',
   'Referer': DIZIBAL_URL + '/'
 };
 
-function fetchTmdbInfo(tmdbId, mediaType) {
-  var cleanId = String(tmdbId).trim();
-  var isTv = mediaType !== "movie";
+function fetchTmdbInfo(imdbId, mediaType) {
+  var cleanId = String(imdbId).trim();
+  var isTv = (mediaType === 'series' || mediaType === 'tv');
 
-  if (cleanId.startsWith("tt")) {
-    var findUrl = 'https://api.themoviedb.org/3/find/' + cleanId + '?api_key=' + TMDB_API_KEY + '&external_source=imdb_id&language=tr-TR';
-    return fetch(findUrl)
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        var item = isTv 
-          ? ((data.tv_results && data.tv_results[0]) || (data.movie_results && data.movie_results[0]))
-          : ((data.movie_results && data.movie_results[0]) || (data.tv_results && data.tv_results[0]));
-        
-        return {
-          titleTr: (item && (item.title || item.name)) || '',
-          titleEn: (item && (item.original_title || item.original_name)) || '',
-          id: item ? item.id : null,
-          isTv: isTv
-        };
-      });
-  } else {
-    var endpoint = isTv ? 'tv' : 'movie';
-    return fetch('https://api.themoviedb.org/3/' + endpoint + '/' + cleanId + '?api_key=' + TMDB_API_KEY + '&language=tr-TR')
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
-        return {
-          titleTr: d.title || d.name || '',
-          titleEn: d.original_title || d.original_name || '',
-          id: d.id,
-          isTv: isTv
-        };
-      });
-  }
+  var findUrl = 'https://api.themoviedb.org/3/find/' + cleanId + '?api_key=' + TMDB_API_KEY + '&external_source=imdb_id&language=tr-TR';
+  
+  return fetch(findUrl)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var item = isTv 
+        ? ((data.tv_results && data.tv_results[0]) || (data.movie_results && data.movie_results[0]))
+        : ((data.movie_results && data.movie_results[0]) || (data.tv_results && data.tv_results[0]));
+      
+      return {
+        titleTr: (item && (item.title || item.name)) || '',
+        titleEn: (item && (item.original_title || item.original_name)) || '',
+        id: item ? item.id : null,
+        isTv: isTv
+      };
+    });
 }
 
 function sanitizeTitle(str) {
@@ -56,13 +43,6 @@ function sanitizeTitle(str) {
     .trim();
 }
 
-function isTitleMatch(t1, t2) {
-  var s1 = sanitizeTitle(t1);
-  var s2 = sanitizeTitle(t2);
-  if (!s1 || !s2) return false;
-  return s1 === s2 || s1.includes(s2) || s2.includes(s1);
-}
-
 function performSearch(query, isTv) {
   var type = isTv ? "series" : "movies";
   var searchUrl = DIZIBAL_URL + '/api/' + type + '?search=' + encodeURIComponent(query) + '&page=1&limit=20&siteMode=full';
@@ -73,7 +53,7 @@ function performSearch(query, isTv) {
     .catch(function() { return []; });
 }
 
-function findDiziBalItem(tmdbInfo) {
+function findDiziBalItem(tmdbInfo, targetImdbId) {
   var titles = [tmdbInfo.titleTr, tmdbInfo.titleEn].filter(Boolean);
   
   function trySearch(index) {
@@ -82,10 +62,15 @@ function findDiziBalItem(tmdbInfo) {
     
     return performSearch(query, tmdbInfo.isTv).then(function(results) {
       var found = results.find(function(r) {
+        var rImdb = r.imdb_id || r.imdbId || r.external_ids?.imdb_id;
+        if (rImdb && String(rImdb).toLowerCase() === String(targetImdbId).toLowerCase()) {
+          return true;
+        }
         var rTmdb = r.id ? String(r.id) : "";
-        if (tmdbInfo.id && rTmdb === String(tmdbInfo.id)) return true;
-        var rTitle = r.name_tr || r.name_en || r.name || r.title_tr || r.title_en || r.title;
-        return isTitleMatch(query, rTitle);
+        if (tmdbInfo.id && rTmdb === String(tmdbInfo.id)) {
+          return true;
+        }
+        return false;
       });
       
       return found || trySearch(index + 1);
@@ -171,17 +156,18 @@ function resolveEmbedStream(streamUrl, movieTitle) {
   .catch(function() { return null; });
 }
 
-function getStreams(tmdbId, mediaType, season, episode) {
+function getStreams(tmdbIdOrImdb, mediaType, season, episode) {
+  var targetImdbId = String(tmdbIdOrImdb).trim();
   var sNum = season || 1;
   var eNum = episode || 1;
   var isTv = (mediaType === 'series' || mediaType === 'tv');
 
-  return fetchTmdbInfo(tmdbId, mediaType)
+  return fetchTmdbInfo(targetImdbId, mediaType)
     .then(function(info) {
       info.isTv = isTv;
       var movieName = info.titleTr || info.titleEn;
       
-      return findDiziBalItem(info).then(function(matchedItem) {
+      return findDiziBalItem(info, targetImdbId).then(function(matchedItem) {
         if (!matchedItem || !matchedItem._id) return [];
 
         var streamEmbedUrlPromise;
