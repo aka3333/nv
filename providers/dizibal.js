@@ -1,6 +1,6 @@
 /**
  * DiziBal - Stremio / Nuvio Addon Provider
- * Kararlı, zaman aşımı korumalı ve dinamik kalite etiketine sahip nihai kodudur.
+ * Kararlı, zaman aşımı korumalı, dinamik kaliteli ve kesin altyazı eşleşmeli final kodudur.
  */
 
 var DIZIBAL_URL = 'https://dizibal.org';
@@ -128,14 +128,14 @@ function findDiziBalItem(tmdbInfo, originalInputId) {
   return trySearch(0);
 }
 
-// Verilen API verisinden (kalite bilgisi varsa) dinamik kaliteyi çeken yardımcı fonksiyon
+// Dinamik kaliteyi API veya HTML içeriğinden çıkaran fonksiyon (veri yoksa boş döner)
 function detectQuality(itemData, htmlContent) {
   var rawQuality = (itemData && (itemData.quality || itemData.resolution)) || '';
   if (!rawQuality && htmlContent) {
     var match = htmlContent.match(/(2160p|4k|1080p|720p|480p)/i);
     if (match) rawQuality = match[1];
   }
-  return (rawQuality ? String(rawQuality).toUpperCase() : '1080p');
+  return rawQuality ? String(rawQuality).toUpperCase() : '';
 }
 
 // DiziBal embed oynatıcı sayfasını ve altyazıları çözen fonksiyon
@@ -174,31 +174,73 @@ function resolveEmbedStream(streamUrl, sourceItemData) {
       if (!streamJson || !streamJson.url) return null;
 
       var subList = [];
-      var subMatch = html.match(/"subtitle"\s*:\s*"([^"]+)"/);
-      if (subMatch) {
-        var rawSubs = subMatch[1].split(",");
-        for (var i = 0; i < rawSubs.length; i++) {
-          var parts = rawSubs[i].match(/\[(.*?)\](.*)/);
+      
+      // Genişletilmiş altyazı yakalama regex desenleri (JSON veya dizi formatları için)
+      var subRegexes = [
+        /"subtitle"\s*:\s*"([^"]+)"/,
+        /subtitles\s*:\s*(\[[^\]]+\])/,
+        /subtitles\s*:\s*"([^"]+)"/
+      ];
+
+      var rawSubText = "";
+      for (var s = 0; s < subRegexes.length; s++) {
+        var match = html.match(subRegexes[s]);
+        if (match && match[1]) {
+          rawSubText = match[1];
+          break;
+        }
+      }
+
+      if (rawSubText) {
+        // Eğer dizi formatında geldiyse stringe çevir veya parçala
+        var rawEntries = [];
+        try {
+          if (rawSubText.startsWith('[')) {
+            var parsed = JSON.parse(rawSubText);
+            for (var p = 0; p < parsed.length; p++) {
+              rawEntries.push((parsed[p].label || parsed[p].language || '') + ' ' + (parsed[p].file || parsed[p].url || ''));
+            }
+          }
+        } catch(e) {}
+
+        if (rawEntries.length === 0) {
+          rawEntries = rawSubText.split(",");
+        }
+
+        for (var i = 0; i < rawEntries.length; i++) {
+          var entry = rawEntries[i];
+          var parts = entry.match(/\[(.*?)\](.*)/) || entry.match(/["']?label["']?\s*:\s*["']([^"']+)["'].*?["']?file["']?\s*:\s*["']([^"']+)["']/i);
+          
+          if (!parts) {
+            // URL ve etiket içeren alternatif format kontrolü
+            if (entry.toLowerCase().includes("http")) {
+              parts = ["", "Türkçe Altyazı", entry.replace(/["']/g, "").trim()];
+            }
+          }
+
           if (parts) {
-            var label = parts[1].trim();
-            var subUrl = parts[2].trim();
+            var label = (parts[1] || "").trim();
+            var subUrl = (parts[2] || "").trim();
             
-            var isTr = label.toLowerCase().includes("türk") || label.toLowerCase().startsWith("tr");
-            if (!isTr) continue;
+            var lowerLabel = label.toLowerCase();
+            var isTr = lowerLabel.includes("türk") || lowerLabel.includes("tr") || lowerLabel.includes("turkish") || lowerLabel === "";
+            if (!isTr && label !== "") continue;
 
             if (subUrl.startsWith('/')) {
               subUrl = u.origin + subUrl;
             }
 
-            subList.push({
-              id: "tur",
-              url: subUrl,
-              lang: "tr",
-              language: "tr",
-              label: label,
-              name: label,
-              title: label
-            });
+            if (subUrl) {
+              subList.push({
+                id: "tur_" + i,
+                url: subUrl,
+                lang: "tr",
+                language: "tr",
+                label: label || "Türkçe Altyazı",
+                name: label || "Türkçe Altyazı",
+                title: label || "Türkçe Altyazı"
+              });
+            }
           }
         }
       }
@@ -217,10 +259,10 @@ function resolveEmbedStream(streamUrl, sourceItemData) {
       ].filter(Boolean);
 
       return {
-        name: PROVIDER_NAME + ' - ' + dynamicQuality,
-        title: titleParts.join(' | '),
+        name: PROVIDER_NAME,
+        title: [dynamicQuality, titleParts.join(' | ')].filter(Boolean).join(' - '),
         url: streamJson.url,
-        quality: dynamicQuality.toLowerCase(),
+        quality: dynamicQuality ? dynamicQuality.toLowerCase() : undefined,
         type: 'hls',
         headers: {
           'Referer': streamUrl,
