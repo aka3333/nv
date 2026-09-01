@@ -1,4 +1,8 @@
-// 1
+/**
+ * DiziBal - Stremio / Nuvio Addon Provider
+ * Kararlı, zaman aşımı korumalı ve Türkçe karakter duyarsız final şablon kodudur.
+ */
+
 var DIZIBAL_URL = 'https://dizibal.org';
 var TMDB_API_KEY = '8c598c9af9b0badc281e95b1890834bc';
 var PROVIDER_NAME = 'DiziBal';
@@ -9,6 +13,29 @@ var HEADERS = {
   'Referer': DIZIBAL_URL + '/'
 };
 
+// İsteklerin takılı kalmasını önleyen zaman aşımı fonksiyonu (Varsayılan: 5 saniye)
+function fetchWithTimeout(url, options, timeoutMs) {
+  timeoutMs = timeoutMs || 5000;
+  return Promise.race([
+    fetch(url, options),
+    new Promise(function(_, reject) {
+      setTimeout(function() { reject(new Error('Request Timeout')); }, timeoutMs);
+    })
+  ]).catch(function() { return null; });
+}
+
+// Türkçe karakter ve eşleşme sorunlarını ortadan kaldıran temizleyici
+function cleanTitle(str) {
+  if (!str) return '';
+  return str.toLowerCase()
+    .replace(/[ığıüşöçİĞÜŞÖÇ]/g, function(m) {
+      return { 'ı':'i', 'ğ':'g', 'ü':'u', 'ş':'s', 'ö':'o', 'ç':'c', 'İ':'i', 'Ğ':'g', 'Ü':'u', 'Ş':'s', 'Ö':'o', 'Ç':'c' }[m];
+    })
+    .replace(/[^a-z0-9\s]/g, '')
+    .trim();
+}
+
+// TMDB veya IMDb ID'sinden film/dizi meta verilerini çeker
 function fetchTmdbInfo(inputIdentifier, mediaType) {
   var cleanId = String(inputIdentifier).trim();
   var isTv = (mediaType === 'series' || mediaType === 'tv');
@@ -18,8 +45,8 @@ function fetchTmdbInfo(inputIdentifier, mediaType) {
   if (isNumeric) {
     var endpoint = isTv ? 'tv' : 'movie';
     url = 'https://api.themoviedb.org/3/' + endpoint + '/' + cleanId + '?api_key=' + TMDB_API_KEY + '&language=tr-TR';
-    return fetch(url)
-      .then(function(r) { return r.json(); })
+    return fetchWithTimeout(url)
+      .then(function(r) { return r ? r.json() : null; })
       .then(function(item) {
         return {
           titleTr: (item && (item.title || item.name)) || '',
@@ -34,12 +61,12 @@ function fetchTmdbInfo(inputIdentifier, mediaType) {
       });
   } else {
     url = 'https://api.themoviedb.org/3/find/' + cleanId + '?api_key=' + TMDB_API_KEY + '&external_source=imdb_id&language=tr-TR';
-    return fetch(url)
-      .then(function(r) { return r.json(); })
+    return fetchWithTimeout(url)
+      .then(function(r) { return r ? r.json() : null; })
       .then(function(data) {
         var item = isTv 
-          ? ((data.tv_results && data.tv_results[0]) || (data.movie_results && data.movie_results[0]))
-          : ((data.movie_results && data.movie_results[0]) || (data.tv_results && data.tv_results[0]));
+          ? ((data && data.tv_results && data.tv_results[0]) || (data && data.movie_results && data.movie_results[0]))
+          : ((data && data.movie_results && data.movie_results[0]) || (data && data.tv_results && data.tv_results[0]));
         
         return {
           titleTr: (item && (item.title || item.name)) || '',
@@ -55,16 +82,18 @@ function fetchTmdbInfo(inputIdentifier, mediaType) {
   }
 }
 
+// DiziBal arama fonksiyonu
 function performSearch(query, isTv) {
   var type = isTv ? "series" : "movies";
   var searchUrl = DIZIBAL_URL + '/api/' + type + '?search=' + encodeURIComponent(query) + '&page=1&limit=20&siteMode=full';
   
-  return fetch(searchUrl, { headers: HEADERS })
-    .then(function(r) { return r.json(); })
-    .then(function(json) { return json.data || []; })
+  return fetchWithTimeout(searchUrl, { headers: HEADERS })
+    .then(function(r) { return r ? r.json() : null; })
+    .then(function(json) { return (json && json.data) || []; })
     .catch(function() { return []; });
 }
 
+// Arama sonuçları içinden en doğru eşleşmeyi bulan akıllı süzgeç
 function findDiziBalItem(tmdbInfo, originalInputId) {
   var queries = [tmdbInfo.titleEn, tmdbInfo.titleTr].filter(Boolean);
 
@@ -86,9 +115,11 @@ function findDiziBalItem(tmdbInfo, originalInputId) {
       var found = resList.find(function(r) {
         var rId = r.id ? String(r.id) : "";
         var rImdb = r.imdb_id ? String(r.imdb_id).toLowerCase() : "";
+        var rTitle = cleanTitle(r.title || r.name || '');
+        
         return (tmdbInfo.id && rId === tmdbInfo.id) || 
                (tmdbInfo.imdbId && rImdb === tmdbInfo.imdbId.toLowerCase()) ||
-               (rImdb === String(originalInputId).toLowerCase());
+               (rTitle === cleanTitle(query));
       });
       return found || trySearch(index + 1);
     });
@@ -97,6 +128,7 @@ function findDiziBalItem(tmdbInfo, originalInputId) {
   return trySearch(0);
 }
 
+// DiziBal embed oynatıcı sayfasını ve altyazıları çözen fonksiyon
 function resolveEmbedStream(streamUrl) {
   var u;
   try {
@@ -105,19 +137,21 @@ function resolveEmbedStream(streamUrl) {
     return Promise.resolve(null);
   }
 
-  return fetch(streamUrl, {
+  return fetchWithTimeout(streamUrl, {
     headers: {
       'User-Agent': HEADERS['User-Agent'],
       'Referer': DIZIBAL_URL + '/'
     }
   })
-  .then(function(r) { return r.text(); })
+  .then(function(r) { return r ? r.text() : null; })
   .then(function(html) {
+    if (!html) return null;
+
     var getStreamMatch = html.match(/fetch\(['"](\/dl\?op=get_stream[^'"]+)['"]/);
     if (!getStreamMatch) return null;
 
     var streamApiUrl = u.origin + getStreamMatch[1];
-    return fetch(streamApiUrl, {
+    return fetchWithTimeout(streamApiUrl, {
       headers: {
         'User-Agent': HEADERS['User-Agent'],
         'Referer': streamUrl,
@@ -125,9 +159,9 @@ function resolveEmbedStream(streamUrl) {
         'X-Requested-With': 'XMLHttpRequest'
       }
     })
-    .then(function(res) { return res.json(); })
+    .then(function(res) { return res ? res.json() : null; })
     .then(function(streamJson) {
-      if (!streamJson.url) return null;
+      if (!streamJson || !streamJson.url) return null;
 
       var subList = [];
       var subMatch = html.match(/"subtitle"\s*:\s*"([^"]+)"/);
@@ -171,21 +205,23 @@ function resolveEmbedStream(streamUrl) {
         name: PROVIDER_NAME + ' - 1080p',
         title: titleParts.join(' | '),
         url: streamJson.url,
-        behaviorHints: {
-          proxyHeaders: {
-            'Referer': streamUrl,
-            'Origin': u.origin,
-            'User-Agent': HEADERS['User-Agent']
-          },
-          notWebReady: false
+        quality: '1080p',
+        type: 'hls',
+        headers: {
+          'Referer': streamUrl,
+          'User-Agent': HEADERS['User-Agent']
         },
-        subtitles: subList
+        subtitles: subList,
+        behaviorHints: {
+          notWebReady: true
+        }
       };
     });
   })
   .catch(function() { return null; });
 }
 
+// Ana Tetikleyici Fonksiyon
 function getStreams(identifier, mediaType, season, episode) {
   var cleanInput = String(identifier).trim();
   var sNum = season || 1;
@@ -202,19 +238,19 @@ function getStreams(identifier, mediaType, season, episode) {
         var streamEmbedUrlPromise;
         if (info.isTv) {
           var epUrl = DIZIBAL_URL + '/api/series/' + matchedItem._id + '/seasons/' + sNum + '/episodes/' + eNum + '/stream';
-          streamEmbedUrlPromise = fetch(epUrl, { headers: HEADERS })
-            .then(function(r) { return r.json(); })
+          streamEmbedUrlPromise = fetchWithTimeout(epUrl, { headers: HEADERS })
+            .then(function(r) { return r ? r.json() : null; })
             .then(function(epJson) {
-              return epJson.data && epJson.data.streamUrl;
+              return epJson && epJson.data && epJson.data.streamUrl;
             });
         } else {
           var slug = matchedItem.slug;
           if (!slug) return Promise.resolve(null);
           var detailUrl = DIZIBAL_URL + '/api/movies/' + slug;
-          streamEmbedUrlPromise = fetch(detailUrl, { headers: HEADERS })
-            .then(function(r) { return r.json(); })
+          streamEmbedUrlPromise = fetchWithTimeout(detailUrl, { headers: HEADERS })
+            .then(function(r) { return r ? r.json() : null; })
             .then(function(detailJson) {
-              return detailJson.data && detailJson.data.streamUrl;
+              return detailJson && detailJson.data && detailJson.data.streamUrl;
             });
         }
 
