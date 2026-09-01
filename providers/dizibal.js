@@ -1,7 +1,4 @@
-/**
- * DiziBal - Stremio / Nuvio Addon Provider
- * Kararlı, zaman aşımı korumalı ve Türkçe karakter duyarsız final şablon kodudur.
- */
+// 2
 
 var DIZIBAL_URL = 'https://dizibal.org';
 var TMDB_API_KEY = '8c598c9af9b0badc281e95b1890834bc';
@@ -202,7 +199,7 @@ function resolveEmbedStream(streamUrl) {
       ].filter(Boolean);
 
       return {
-        name: PROVIDER_NAME + ' - 1080p',
+        name: PROVIDER_NAME,
         title: titleParts.join(' | '),
         url: streamJson.url,
         quality: '1080p',
