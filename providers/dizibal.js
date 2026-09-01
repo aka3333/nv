@@ -1,6 +1,6 @@
 /**
  * DiziBal - Stremio / Nuvio Addon Provider
- * Kararlı, zaman aşımı korumalı, zengin detaylı etiket formatına sahip final kodudur.
+ // 2
  */
 
 var DIZIBAL_URL = 'https://dizibal.org';
@@ -194,11 +194,15 @@ function resolveEmbedStream(streamUrl) {
       }
 
       var hasTurkishSub = subList.length > 0;
-      var langLabel = hasTurkishSub ? "Türkçe Altyazı" : "";
-      var formatType = "HLS"; // DiziBal akışları HLS (.m3u8) tabanlıdır
+      
+      // İstediğin etiket formatı bileşenleri
+      var formatType = "HLS"; // Akış tipi (M3U8 / HLS)
+      var codecType = "H264"; // Standart web video codec varsayılanı
+      var langLabel = hasTurkishSub ? "Türkçe Altyazı" : "Türkçe Dublaj";
 
       var titleParts = [
         formatType,
+        codecType,
         langLabel
       ].filter(Boolean);
 
