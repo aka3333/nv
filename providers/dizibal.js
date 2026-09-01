@@ -1,7 +1,7 @@
 // v1
 var DIZIBAL_URL = 'https://dizibal.org';
 var TMDB_API_KEY = '8c598c9af9b0badc281e95b1890834bc';
-var PROVIDER_NAME = 'DiziBal';
+var PROVIDER_NAME = 'Dizibal';
 
 var HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
@@ -85,7 +85,7 @@ function performSearch(query, isTv) {
     .catch(function() { return []; });
 }
 
-function findDiziBalItem(tmdbInfo, originalInputId) {
+function findDizibalItem(tmdbInfo, originalInputId) {
   var queries = [tmdbInfo.titleEn, tmdbInfo.titleTr].filter(Boolean);
 
   function trySearch(index) {
@@ -274,7 +274,7 @@ function getStreams(identifier, mediaType, season, episode) {
     .then(function(info) {
       info.isTv = isTv;
 
-      return findDiziBalItem(info, cleanInput).then(function(matchedItem) {
+      return findDizibalItem(info, cleanInput).then(function(matchedItem) {
         if (!matchedItem || !matchedItem._id) return [];
 
         var streamEmbedUrlPromise;
