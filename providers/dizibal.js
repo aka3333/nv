@@ -1,6 +1,6 @@
 /**
  * DiziBal - Stremio / Nuvio Addon Provider
- // 2
+ * Kararlı, zaman aşımı korumalı ve dinamik kalite etiketine sahip nihai kodudur.
  */
 
 var DIZIBAL_URL = 'https://dizibal.org';
@@ -128,8 +128,18 @@ function findDiziBalItem(tmdbInfo, originalInputId) {
   return trySearch(0);
 }
 
+// Verilen API verisinden (kalite bilgisi varsa) dinamik kaliteyi çeken yardımcı fonksiyon
+function detectQuality(itemData, htmlContent) {
+  var rawQuality = (itemData && (itemData.quality || itemData.resolution)) || '';
+  if (!rawQuality && htmlContent) {
+    var match = htmlContent.match(/(2160p|4k|1080p|720p|480p)/i);
+    if (match) rawQuality = match[1];
+  }
+  return (rawQuality ? String(rawQuality).toUpperCase() : '1080p');
+}
+
 // DiziBal embed oynatıcı sayfasını ve altyazıları çözen fonksiyon
-function resolveEmbedStream(streamUrl) {
+function resolveEmbedStream(streamUrl, sourceItemData) {
   var u;
   try {
     u = new URL(streamUrl);
@@ -194,10 +204,10 @@ function resolveEmbedStream(streamUrl) {
       }
 
       var hasTurkishSub = subList.length > 0;
+      var dynamicQuality = detectQuality(sourceItemData, html);
       
-      // İstediğin etiket formatı bileşenleri
-      var formatType = "HLS"; // Akış tipi (M3U8 / HLS)
-      var codecType = "H264"; // Standart web video codec varsayılanı
+      var formatType = "HLS";
+      var codecType = "H264";
       var langLabel = hasTurkishSub ? "Türkçe Altyazı" : "Türkçe Dublaj";
 
       var titleParts = [
@@ -207,10 +217,10 @@ function resolveEmbedStream(streamUrl) {
       ].filter(Boolean);
 
       return {
-        name: PROVIDER_NAME + ' - 1080p',
-        title: titleParts.join(' - '),
+        name: PROVIDER_NAME + ' - ' + dynamicQuality,
+        title: titleParts.join(' | '),
         url: streamJson.url,
-        quality: '1080p',
+        quality: dynamicQuality.toLowerCase(),
         type: 'hls',
         headers: {
           'Referer': streamUrl,
@@ -241,12 +251,18 @@ function getStreams(identifier, mediaType, season, episode) {
         if (!matchedItem || !matchedItem._id) return [];
 
         var streamEmbedUrlPromise;
+        var activeItemData = matchedItem;
+
         if (info.isTv) {
           var epUrl = DIZIBAL_URL + '/api/series/' + matchedItem._id + '/seasons/' + sNum + '/episodes/' + eNum + '/stream';
           streamEmbedUrlPromise = fetchWithTimeout(epUrl, { headers: HEADERS })
             .then(function(r) { return r ? r.json() : null; })
             .then(function(epJson) {
-              return epJson && epJson.data && epJson.data.streamUrl;
+              if (epJson && epJson.data) {
+                activeItemData = epJson.data;
+                return epJson.data.streamUrl;
+              }
+              return null;
             });
         } else {
           var slug = matchedItem.slug;
@@ -255,13 +271,17 @@ function getStreams(identifier, mediaType, season, episode) {
           streamEmbedUrlPromise = fetchWithTimeout(detailUrl, { headers: HEADERS })
             .then(function(r) { return r ? r.json() : null; })
             .then(function(detailJson) {
-              return detailJson && detailJson.data && detailJson.data.streamUrl;
+              if (detailJson && detailJson.data) {
+                activeItemData = detailJson.data;
+                return detailJson.data.streamUrl;
+              }
+              return null;
             });
         }
 
         return streamEmbedUrlPromise.then(function(streamEmbedUrl) {
           if (!streamEmbedUrl) return [];
-          return resolveEmbedStream(streamEmbedUrl).then(function(stream) {
+          return resolveEmbedStream(streamEmbedUrl, activeItemData).then(function(stream) {
             return stream ? [stream] : [];
           });
         });
