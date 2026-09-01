@@ -1,12 +1,11 @@
 {
-  "name": "Nuvio Eklentileri",
+  "name": "Nuvio Plugin",
   "version": "1.0.0",
   "scrapers": [
     {
       "id": "dizibal",
       "name": "Dizibal",
       "version": "1.0.0",
-      "description": "Dizibal Eklentisi",
       "supportedTypes": [
         "movie",
         "series"
