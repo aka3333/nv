@@ -1,8 +1,4 @@
-/**
- * DiziBal - Stremio / Nuvio Addon Provider
- * Kararlı, zaman aşımı korumalı, dinamik kaliteli ve kesin altyazı eşleşmeli final kodudur.
- */
-
+// v1
 var DIZIBAL_URL = 'https://dizibal.org';
 var TMDB_API_KEY = '8c598c9af9b0badc281e95b1890834bc';
 var PROVIDER_NAME = 'DiziBal';
@@ -13,7 +9,6 @@ var HEADERS = {
   'Referer': DIZIBAL_URL + '/'
 };
 
-// İsteklerin takılı kalmasını önleyen zaman aşımı fonksiyonu (Varsayılan: 5 saniye)
 function fetchWithTimeout(url, options, timeoutMs) {
   timeoutMs = timeoutMs || 5000;
   return Promise.race([
@@ -24,7 +19,6 @@ function fetchWithTimeout(url, options, timeoutMs) {
   ]).catch(function() { return null; });
 }
 
-// Türkçe karakter ve eşleşme sorunlarını ortadan kaldıran temizleyici
 function cleanTitle(str) {
   if (!str) return '';
   return str.toLowerCase()
@@ -35,7 +29,6 @@ function cleanTitle(str) {
     .trim();
 }
 
-// TMDB veya IMDb ID'sinden film/dizi meta verilerini çeker
 function fetchTmdbInfo(inputIdentifier, mediaType) {
   var cleanId = String(inputIdentifier).trim();
   var isTv = (mediaType === 'series' || mediaType === 'tv');
@@ -82,7 +75,6 @@ function fetchTmdbInfo(inputIdentifier, mediaType) {
   }
 }
 
-// DiziBal arama fonksiyonu
 function performSearch(query, isTv) {
   var type = isTv ? "series" : "movies";
   var searchUrl = DIZIBAL_URL + '/api/' + type + '?search=' + encodeURIComponent(query) + '&page=1&limit=20&siteMode=full';
@@ -93,7 +85,6 @@ function performSearch(query, isTv) {
     .catch(function() { return []; });
 }
 
-// Arama sonuçları içinden en doğru eşleşmeyi bulan akıllı süzgeç
 function findDiziBalItem(tmdbInfo, originalInputId) {
   var queries = [tmdbInfo.titleEn, tmdbInfo.titleTr].filter(Boolean);
 
@@ -128,17 +119,15 @@ function findDiziBalItem(tmdbInfo, originalInputId) {
   return trySearch(0);
 }
 
-// Dinamik kaliteyi API veya HTML içeriğinden çıkaran fonksiyon (veri yoksa boş döner)
 function detectQuality(itemData, htmlContent) {
   var rawQuality = (itemData && (itemData.quality || itemData.resolution)) || '';
   if (!rawQuality && htmlContent) {
-    var match = htmlContent.match(/(2160p|4k|1080p|720p|480p)/i);
+    var match = htmlContent.match(/(2160p|4K|1080p|FHD|720p|HD)/i);
     if (match) rawQuality = match[1];
   }
   return rawQuality ? String(rawQuality).toUpperCase() : '';
 }
 
-// DiziBal embed oynatıcı sayfasını ve altyazıları çözen fonksiyon
 function resolveEmbedStream(streamUrl, sourceItemData) {
   var u;
   try {
@@ -175,7 +164,6 @@ function resolveEmbedStream(streamUrl, sourceItemData) {
 
       var subList = [];
       
-      // Genişletilmiş altyazı yakalama regex desenleri (JSON veya dizi formatları için)
       var subRegexes = [
         /"subtitle"\s*:\s*"([^"]+)"/,
         /subtitles\s*:\s*(\[[^\]]+\])/,
@@ -192,7 +180,6 @@ function resolveEmbedStream(streamUrl, sourceItemData) {
       }
 
       if (rawSubText) {
-        // Eğer dizi formatında geldiyse stringe çevir veya parçala
         var rawEntries = [];
         try {
           if (rawSubText.startsWith('[')) {
@@ -212,7 +199,6 @@ function resolveEmbedStream(streamUrl, sourceItemData) {
           var parts = entry.match(/\[(.*?)\](.*)/) || entry.match(/["']?label["']?\s*:\s*["']([^"']+)["'].*?["']?file["']?\s*:\s*["']([^"']+)["']/i);
           
           if (!parts) {
-            // URL ve etiket içeren alternatif format kontrolü
             if (entry.toLowerCase().includes("http")) {
               parts = ["", "Türkçe Altyazı", entry.replace(/["']/g, "").trim()];
             }
@@ -278,7 +264,6 @@ function resolveEmbedStream(streamUrl, sourceItemData) {
   .catch(function() { return null; });
 }
 
-// Ana Tetikleyici Fonksiyon
 function getStreams(identifier, mediaType, season, episode) {
   var cleanInput = String(identifier).trim();
   var sNum = season || 1;
